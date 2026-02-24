@@ -1,7 +1,8 @@
+export const dynamic = 'force-dynamic';
 import { prisma } from '@/lib/prisma';
 import PerformanceChart from '@/components/ui/PerformanceChart';
 
-export const dynamic = 'force-dynamic';
+
 
 export default async function DashboardOverview() {
   // 1. Fetch all trades from your Supabase vault
