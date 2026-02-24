@@ -1,0 +1,25 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Trade {
+  id               String   @id @default(uuid())
+  ticker           String   // e.g., "NQ", "AAPL"
+  side             String   // "LONG" or "SHORT"
+  entryPrice       Float
+  exitPrice        Float?
+  netPnl           Float?
+  
+  // High-Tech Features
+  peakHeartRate    Int?     // Storing maximum BPM during the trade
+  multiversePnl    Float?   // What the AI says you COULD have made
+  aiSentimentFlag  String?  // e.g., "FEAR / RUSHED EXECUTION"
+
+  createdAt        DateTime @default(now())
+}
