@@ -1,80 +1,98 @@
-import { prisma } from "@/lib/prisma";
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
-import { TrendingUp, Activity, DollarSign } from "lucide-react";
+import { prisma } from '@/lib/prisma';
+import { auth } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
 
-export default async function DashboardOverview() {
+export default async function ExecutionLogPage() {
+  // SECURE THE VAULT
   const { userId } = await auth();
-  if (!userId) redirect("/sign-in");
+  if (!userId) redirect('/sign-in');
 
+  // Fetch trades, latest first
   const trades = await prisma.trade.findMany({
-    where: { userId: userId }, 
-    orderBy: { createdAt: "desc" },
+    where: { userId: userId },
+    orderBy: { createdAt: 'desc' }
   });
 
-  const totalExecutions = trades.length;
-  const netPnl = trades.reduce((acc, trade) => acc + (trade.netPnl || 0), 0);
-  const wins = trades.filter((t) => t.netPnl && t.netPnl > 0).length;
-  const successRate = totalExecutions > 0 ? ((wins / totalExecutions) * 100).toFixed(1) : "0.0";
+  // 👇 THE COLOR-CODED MINDSET BADGE LOGIC 👇
+  const getMindsetLabel = (quality: string | null) => {
+    if (!quality) return <span className="text-gray-600 border border-gray-800 px-2 py-1 rounded text-[8px]">UNLOGGED</span>;
+    if (quality === 'A+ Setup') return <span className="text-green-500 border border-green-900/50 bg-green-950/20 px-2 py-1 rounded text-[8px] tracking-widest">A+ SETUP</span>;
+    if (quality === 'B-Grade') return <span className="text-blue-400 border border-blue-900/50 bg-blue-950/20 px-2 py-1 rounded text-[8px] tracking-widest">B-GRADE</span>;
+    // FOMO, Revenge, Boredom will be red
+    return <span className="text-red-500 border border-red-900/50 bg-red-950/20 px-2 py-1 rounded text-[8px] tracking-widest">{quality.toUpperCase()}</span>;
+  };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      {/* HEADER SECTION */}
-      <div className="border-b border-red-950/30 pb-6">
-        <h1 className="text-3xl font-black text-white tracking-widest uppercase">Overview</h1>
-        <p className="text-gray-500 text-sm font-medium mt-1">Personalized performance metrics.</p>
+    <div className="max-w-6xl mx-auto animate-in fade-in duration-700 pb-20">
+      
+      <div className="mb-8">
+        <h2 className="text-3xl font-black text-white tracking-widest uppercase drop-shadow-md">
+          Execution Log
+        </h2>
+        <p className="text-gray-500 mt-2 text-sm tracking-wider">
+          Comprehensive ledger of all neutralized targets and market psychology.
+        </p>
       </div>
 
-      {/* STATS GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-[#0a0a0a] border border-red-950/50 p-6 rounded-xl shadow-2xl relative overflow-hidden group">
-           <div className="absolute top-0 left-0 w-1 h-full bg-red-900 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-           <p className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-             <Activity size={14} className="text-red-900" /> Total Executions
-           </p>
-           <h2 className="text-3xl font-black text-white mt-4">{totalExecutions}</h2>
-        </div>
+      <div className="bg-[#0a0a0a] border border-red-950/40 rounded-xl overflow-hidden shadow-2xl">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-red-950/10 border-b border-red-950/30">
+                <th className="py-4 px-6 text-[10px] font-black text-red-900 uppercase tracking-[0.2em]">Date</th>
+                <th className="py-4 px-6 text-[10px] font-black text-red-900 uppercase tracking-[0.2em]">Asset</th>
+                <th className="py-4 px-6 text-[10px] font-black text-red-900 uppercase tracking-[0.2em]">Side</th>
+                
+                {/* NEW PSYCHOLOGY COLUMN HEADER */}
+                <th className="py-4 px-6 text-[10px] font-black text-red-900 uppercase tracking-[0.2em]">Psychology</th>
+                
+                <th className="py-4 px-6 text-[10px] font-black text-red-900 uppercase tracking-[0.2em]">Entry</th>
+                <th className="py-4 px-6 text-[10px] font-black text-red-900 uppercase tracking-[0.2em]">R:R Ratio</th>
+                <th className="py-4 px-6 text-[10px] font-black text-red-900 uppercase tracking-[0.2em]">Net PNL</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-900/50">
+              {trades.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-gray-700 text-xs font-bold uppercase tracking-widest">
+                    [ Vault Secure : No Executions Found ]
+                  </td>
+                </tr>
+              ) : (
+                trades.map((trade) => (
+                  <tr key={trade.id} className="hover:bg-red-950/10 transition-colors group">
+                    <td className="py-4 px-6 text-xs font-bold text-gray-500">
+                      {new Date(trade.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="py-4 px-6 text-sm font-black text-white tracking-widest">
+                      {trade.ticker}
+                    </td>
+                    <td className="py-4 px-6">
+                      <span className={`text-[10px] font-black tracking-widest px-2 py-1 rounded ${trade.side === 'LONG' ? 'text-green-500 bg-green-950/20' : 'text-red-500 bg-red-950/20'}`}>
+                        {trade.side}
+                      </span>
+                    </td>
+                    
+                    {/* NEW PSYCHOLOGY DATA CELL */}
+                    <td className="py-4 px-6 font-black">
+                      {getMindsetLabel(trade.setupQuality)}
+                    </td>
 
-        <div className="bg-[#0a0a0a] border border-red-950/50 p-6 rounded-xl shadow-2xl relative overflow-hidden group">
-           <div className="absolute top-0 left-0 w-1 h-full bg-red-900 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-           <p className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-             <TrendingUp size={14} className="text-red-900" /> Success Rate
-           </p>
-           <h2 className="text-3xl font-black text-white mt-4">{successRate}%</h2>
+                    <td className="py-4 px-6 text-xs font-mono text-gray-400">
+                      {trade.entryPrice}
+                    </td>
+                    <td className="py-4 px-6 text-xs font-bold text-gray-400">
+                      {trade.riskReward ? `1:${trade.riskReward.toFixed(1)}` : 'N/A'}
+                    </td>
+                    <td className={`py-4 px-6 text-sm font-black font-mono ${trade.netPnl && trade.netPnl > 0 ? 'text-gray-300' : 'text-red-600'}`}>
+                      {trade.netPnl && trade.netPnl > 0 ? '+' : ''}${trade.netPnl?.toFixed(2) || '0.00'}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-
-        <div className="bg-[#0a0a0a] border border-red-950/50 p-6 rounded-xl shadow-2xl relative overflow-hidden group">
-           <div className="absolute top-0 left-0 w-1 h-full bg-red-900 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-           <p className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
-             <DollarSign size={14} className="text-red-900" /> Net PnL
-           </p>
-           <h2 className={`text-3xl font-black mt-4 ${netPnl >= 0 ? 'text-white' : 'text-red-600'}`}>
-             {netPnl >= 0 ? '+' : '-'}${Math.abs(netPnl).toFixed(2)}
-           </h2>
-        </div>
-      </div>
-
-      {/* --- MARKET SENTIMENT ANALYSIS (REPLACED PLACEHOLDER) --- */}
-      <div className="bg-[#0a0a0a] border border-red-950/40 rounded-xl p-8 min-h-[300px]">
-         <div className="flex justify-between items-center mb-6">
-           <h3 className="text-xs font-black text-red-900 uppercase tracking-[0.3em]">Market Sentiment Analysis</h3>
-           <span className="text-[10px] text-gray-600 font-bold uppercase">System Live</span>
-         </div>
-         
-         <div className="grid grid-cols-2 gap-4">
-           <div className="border border-red-950/20 p-4 rounded-lg bg-red-950/5">
-             <p className="text-[10px] text-gray-500 font-bold uppercase">Avg Win</p>
-             <p className="text-xl font-black text-white mt-1">
-               ${trades.filter(t => (t.netPnl || 0) > 0).length > 0 ? (trades.filter(t => (t.netPnl || 0) > 0).reduce((acc, t) => acc + (t.netPnl || 0), 0) / trades.filter(t => (t.netPnl || 0) > 0).length).toFixed(2) : "0.00"}
-             </p>
-           </div>
-           <div className="border border-red-950/20 p-4 rounded-lg bg-red-950/5">
-             <p className="text-[10px] text-gray-500 font-bold uppercase">Avg Loss</p>
-             <p className="text-xl font-black text-red-600 mt-1">
-               ${trades.filter(t => (t.netPnl || 0) < 0).length > 0 ? Math.abs(trades.filter(t => (t.netPnl || 0) < 0).reduce((acc, t) => acc + (t.netPnl || 0), 0) / trades.filter(t => (t.netPnl || 0) < 0).length).toFixed(2) : "0.00"}
-             </p>
-           </div>
-         </div>
       </div>
     </div>
   );
