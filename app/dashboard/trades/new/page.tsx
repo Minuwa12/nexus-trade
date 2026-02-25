@@ -7,28 +7,39 @@ export default function InjectTradePage() {
   async function handleInject(formData: FormData) {
     'use server';
     
-    // 1. Get the Bouncer's ID
     const { userId } = await auth(); 
-    
-    if (!userId) {
-      throw new Error("You must be logged in to inject trades.");
-    }
+    if (!userId) throw new Error("You must be logged in to inject trades.");
 
     const ticker = formData.get('ticker') as string;
     const side = formData.get('side') as string;
     const entryPrice = parseFloat(formData.get('entryPrice') as string);
     const exitPrice = parseFloat(formData.get('exitPrice') as string);
     const netPnl = parseFloat(formData.get('netPnl') as string);
+    
+    // 1. GET NEW FIELDS
+    const stopLoss = formData.get('stopLoss') ? parseFloat(formData.get('stopLoss') as string) : null;
+    const takeProfit = formData.get('takeProfit') ? parseFloat(formData.get('takeProfit') as string) : null;
 
-    // 2. Stamp the Trade with the ID
+    // 2. MATH: Calculate Risk/Reward Ratio
+    let rrRatio = 0;
+    if (stopLoss && takeProfit) {
+      const risk = Math.abs(entryPrice - stopLoss);
+      const reward = Math.abs(takeProfit - entryPrice);
+      rrRatio = risk > 0 ? (reward / risk) : 0;
+    }
+
+    // 3. Update the Database
     await prisma.trade.create({
       data: {
-        userId,  // 👈 THIS FIXES THE RED ERROR
+        userId,
         ticker,
         side,
         entryPrice,
         exitPrice,
         netPnl,
+        stopLoss,      // 👈 Added
+        takeProfit,    // 👈 Added
+        riskReward: rrRatio, // 👈 Added
       }
     });
 
@@ -36,7 +47,7 @@ export default function InjectTradePage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto mt-10 animate-in fade-in duration-700">
+    <div className="max-w-3xl mx-auto mt-10 animate-in fade-in duration-700 pb-20">
       <div className="mb-10">
         <h2 className="text-4xl font-black text-white tracking-widest uppercase drop-shadow-md">
           Inject Trade Data
@@ -67,6 +78,18 @@ export default function InjectTradePage() {
             <label className="text-[10px] font-bold text-gray-500 tracking-[0.2em] uppercase">Exit Price</label>
             <input type="number" step="any" name="exitPrice" required className="w-full bg-[#050505] border border-red-950/50 rounded px-4 py-3 text-white focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition" />
           </div>
+
+          {/* --- NEW RISK/REWARD INPUTS --- */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-red-600/50 tracking-[0.2em] uppercase">Stop Loss</label>
+            <input type="number" step="any" name="stopLoss" placeholder="0.0000" className="w-full bg-[#050505] border border-red-900/30 rounded px-4 py-3 text-white focus:outline-none focus:border-red-700 transition" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-gray-500 tracking-[0.2em] uppercase">Take Profit</label>
+            <input type="number" step="any" name="takeProfit" placeholder="0.0000" className="w-full bg-[#050505] border border-red-950/50 rounded px-4 py-3 text-white focus:outline-none focus:border-red-700 transition" />
+          </div>
+          {/* ------------------------------ */}
+
           <div className="space-y-2 col-span-2">
             <label className="text-[10px] font-bold text-gray-500 tracking-[0.2em] uppercase">Net PNL ($)</label>
             <input type="number" step="any" name="netPnl" required className="w-full bg-[#050505] border border-red-950/50 rounded px-4 py-3 text-white focus:outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition" />
