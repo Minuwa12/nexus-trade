@@ -1,11 +1,23 @@
 export const dynamic = 'force-dynamic';
+import { auth } from '@clerk/nextjs/server'; // 👈 1. BOUNCER IMPORTED
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { deleteTrade } from '@/app/actions/tradeActions';
+import { redirect } from 'next/navigation';
 
 export default async function TradeLogPage() {
-  // Reaches into Supabase to get your trades
+  // 👈 2. GET YOUR SPECIFIC ID
+  const { userId } = await auth(); 
+
+  if (!userId) {
+    redirect('/sign-in');
+  }
+
+  // 👈 3. THE FILTER: Only reach into Supabase for YOUR trades
   const trades = await prisma.trade.findMany({
+    where: { 
+      userId: userId 
+    },
     orderBy: { createdAt: 'desc' }
   });
 
