@@ -20,10 +20,16 @@ export default function DashboardLayout({
           <Link href="/dashboard" className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-red-950/10 rounded transition-all group">
             <span className="text-[10px] font-bold tracking-[0.2em] uppercase">Overview</span>
           </Link>
+          
           <Link href="/dashboard/trades" className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-red-950/10 rounded transition-all group">
             <span className="text-[10px] font-bold tracking-[0.2em] uppercase">Execution Log</span>
           </Link>
-          {/* Add more links here if you have them */}
+
+          {/* 👇 THE NEW VOICE JOURNAL BUTTON 👇 */}
+          <Link href="/dashboard/voice" className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-red-950/10 rounded transition-all group">
+            <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-red-500 group-hover:text-red-400">Voice Journal</span>
+          </Link>
+          {/* 👆 THE NEW VOICE JOURNAL BUTTON 👆 */}
         </nav>
 
         {/* --- THE TERMINATE SESSION BUTTON --- */}

@@ -6,8 +6,19 @@ import { auth } from '@clerk/nextjs/server';
 
 // --- THE DELETE FUNCTION ---
 export async function deleteTrade(formData: FormData) {
+  const { userId } = await auth(); // 👈 Get current user
   const id = formData.get('id') as string;
-  await prisma.trade.delete({ where: { id } });
+
+  if (!userId) throw new Error("Unauthorized");
+
+  // Only delete if the ID matches AND it belongs to this user
+  await prisma.trade.delete({ 
+    where: { 
+      id: id,
+      userId: userId // 👈 THE EXTRA LOCK
+    } 
+  });
+
   revalidatePath('/dashboard');
 }
 

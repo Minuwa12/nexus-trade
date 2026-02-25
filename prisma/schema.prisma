@@ -10,16 +10,17 @@ datasource db {
 
 model Trade {
   id              String   @id @default(uuid())
-  userId          String   
-  ticker          String   
-  side            String   
+  userId          String
+  ticker          String
+  side            String
   entryPrice      Float
   exitPrice       Float?
   netPnl          Float?
   
-  peakHeartRate   Int?     
-  multiversePnl   Float?   
-  aiSentimentFlag String?  
+  // 
+  stopLoss        Float?
+  takeProfit      Float?
+  riskReward      Float?
 
   createdAt       DateTime @default(now())
-}
+} // 

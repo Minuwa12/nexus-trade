@@ -1,102 +1,81 @@
-export const dynamic = 'force-dynamic';
-import { auth } from '@clerk/nextjs/server'; // 👈 1. BOUNCER IMPORTED
-import Link from 'next/link';
-import { prisma } from '@/lib/prisma';
-import { deleteTrade } from '@/app/actions/tradeActions';
-import { redirect } from 'next/navigation';
+import { prisma } from "@/lib/prisma";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
+import { TrendingUp, Activity, DollarSign } from "lucide-react";
 
-export default async function TradeLogPage() {
-  // 👈 2. GET YOUR SPECIFIC ID
-  const { userId } = await auth(); 
+export default async function DashboardOverview() {
+  const { userId } = await auth();
+  if (!userId) redirect("/sign-in");
 
-  if (!userId) {
-    redirect('/sign-in');
-  }
-
-  // 👈 3. THE FILTER: Only reach into Supabase for YOUR trades
   const trades = await prisma.trade.findMany({
-    where: { 
-      userId: userId 
-    },
-    orderBy: { createdAt: 'desc' }
+    where: { userId: userId }, 
+    orderBy: { createdAt: "desc" },
   });
 
+  const totalExecutions = trades.length;
+  const netPnl = trades.reduce((acc, trade) => acc + (trade.netPnl || 0), 0);
+  const wins = trades.filter((t) => t.netPnl && t.netPnl > 0).length;
+  const successRate = totalExecutions > 0 ? ((wins / totalExecutions) * 100).toFixed(1) : "0.0";
+
   return (
-    <div className="space-y-6">
-      
-      {/* Page Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-100 uppercase tracking-widest">Execution Log</h1>
-          <p className="text-sm text-gray-500 mt-1 font-medium">Securely synced with Supabase Vault.</p>
+    <div className="space-y-8 animate-in fade-in duration-700">
+      {/* HEADER SECTION */}
+      <div className="border-b border-red-950/30 pb-6">
+        <h1 className="text-3xl font-black text-white tracking-widest uppercase">Overview</h1>
+        <p className="text-gray-500 text-sm font-medium mt-1">Personalized performance metrics.</p>
+      </div>
+
+      {/* STATS GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-[#0a0a0a] border border-red-950/50 p-6 rounded-xl shadow-2xl relative overflow-hidden group">
+           <div className="absolute top-0 left-0 w-1 h-full bg-red-900 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+           <p className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+             <Activity size={14} className="text-red-900" /> Total Executions
+           </p>
+           <h2 className="text-5xl font-black text-white mt-4">{totalExecutions}</h2>
         </div>
-        
-        <Link href="/dashboard/trades/new" className="bg-red-900 hover:bg-red-800 text-white px-6 py-2 rounded-lg text-sm font-bold tracking-wider transition border border-red-700/50 shadow-[0_0_15px_rgba(153,27,27,0.4)]">
-          + NEW ENTRY
-        </Link>
+
+        <div className="bg-[#0a0a0a] border border-red-950/50 p-6 rounded-xl shadow-2xl relative overflow-hidden group">
+           <div className="absolute top-0 left-0 w-1 h-full bg-red-900 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+           <p className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+             <TrendingUp size={14} className="text-red-900" /> Success Rate
+           </p>
+           <h2 className="text-5xl font-black text-white mt-4">{successRate}%</h2>
+        </div>
+
+        <div className="bg-[#0a0a0a] border border-red-950/50 p-6 rounded-xl shadow-2xl relative overflow-hidden group">
+           <div className="absolute top-0 left-0 w-1 h-full bg-red-900 opacity-50 group-hover:opacity-100 transition-opacity"></div>
+           <p className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+             <DollarSign size={14} className="text-red-900" /> Net PnL
+           </p>
+           <h2 className={`text-5xl font-black mt-4 ${netPnl >= 0 ? 'text-white' : 'text-red-600'}`}>
+             {netPnl >= 0 ? '+' : '-'}${Math.abs(netPnl).toFixed(2)}
+           </h2>
+        </div>
       </div>
 
-      {/* The Data Table */}
-      <div className="bg-[#0a0a0a] border border-red-950/60 rounded-xl overflow-hidden shadow-xl relative">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-900 to-transparent"></div>
-        
-        <table className="w-full text-left border-collapse z-10 relative">
-          <thead>
-            <tr className="bg-[#050505] border-b border-red-950/50 text-xs uppercase tracking-widest text-gray-500 font-bold">
-              <th className="px-6 py-4">Date</th>
-              <th className="px-6 py-4">Asset</th>
-              <th className="px-6 py-4">Side</th>
-              <th className="px-6 py-4">Entry / Exit</th>
-              <th className="px-6 py-4 text-right">Net PnL</th>
-              <th className="px-6 py-4"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-red-950/30">
-            {trades.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-6 py-16 text-center text-red-700/50 font-mono text-sm tracking-widest uppercase font-bold animate-pulse">
-                  [ Vault Empty : No Executions Found ]
-                </td>
-              </tr>
-            ) : (
-              trades.map((trade) => (
-                <tr key={trade.id} className="hover:bg-red-950/20 transition group">
-                  <td className="px-6 py-4 text-sm text-gray-400 font-mono">{trade.createdAt.toLocaleDateString()}</td>
-                  <td className="px-6 py-4 text-sm font-black text-gray-200">{trade.ticker}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs font-bold uppercase tracking-wider rounded ${trade.side === 'LONG' ? 'bg-gray-800 text-gray-300 border border-gray-600' : 'bg-red-950/50 text-red-500 border border-red-900/50'}`}>
-                      {trade.side}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-400 font-mono">
-                    ${trade.entryPrice} <span className="text-gray-600">→</span> ${trade.exitPrice || 'OPEN'}
-                  </td>
-                  <td className={`px-6 py-4 text-sm font-black text-right font-mono ${
-                    trade.netPnl && trade.netPnl > 0 ? 'text-gray-300' : 'text-red-500'
-                  }`}>
-                    {trade.netPnl && trade.netPnl > 0 ? '+' : ''}{trade.netPnl ? `$${Math.abs(trade.netPnl).toFixed(2)}` : '$0.00'}
-                  </td>
-                  
-                  {/* DELETE ICON */}
-                  <td className="px-4 py-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                    <form action={deleteTrade}>
-                      <input type="hidden" name="id" value={trade.id} />
-                      <button type="submit" className="text-red-900 hover:text-red-500 transition-colors p-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                          <line x1="10" y1="11" x2="10" y2="17"></line>
-                          <line x1="14" y1="11" x2="14" y2="17"></line>
-                        </svg>
-                      </button>
-                    </form>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      {/* --- MARKET SENTIMENT ANALYSIS (REPLACED PLACEHOLDER) --- */}
+      <div className="bg-[#0a0a0a] border border-red-950/40 rounded-xl p-8 min-h-[300px]">
+         <div className="flex justify-between items-center mb-6">
+           <h3 className="text-xs font-black text-red-900 uppercase tracking-[0.3em]">Market Sentiment Analysis</h3>
+           <span className="text-[10px] text-gray-600 font-bold uppercase">System Live</span>
+         </div>
+         
+         <div className="grid grid-cols-2 gap-4">
+           <div className="border border-red-950/20 p-4 rounded-lg bg-red-950/5">
+             <p className="text-[10px] text-gray-500 font-bold uppercase">Avg Win</p>
+             <p className="text-xl font-black text-white mt-1">
+               ${trades.filter(t => (t.netPnl || 0) > 0).length > 0 ? (trades.filter(t => (t.netPnl || 0) > 0).reduce((acc, t) => acc + (t.netPnl || 0), 0) / trades.filter(t => (t.netPnl || 0) > 0).length).toFixed(2) : "0.00"}
+             </p>
+           </div>
+           <div className="border border-red-950/20 p-4 rounded-lg bg-red-950/5">
+             <p className="text-[10px] text-gray-500 font-bold uppercase">Avg Loss</p>
+             <p className="text-xl font-black text-red-600 mt-1">
+               ${trades.filter(t => (t.netPnl || 0) < 0).length > 0 ? Math.abs(trades.filter(t => (t.netPnl || 0) < 0).reduce((acc, t) => acc + (t.netPnl || 0), 0) / trades.filter(t => (t.netPnl || 0) < 0).length).toFixed(2) : "0.00"}
+             </p>
+           </div>
+         </div>
       </div>
-
     </div>
   );
 }
