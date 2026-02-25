@@ -25,6 +25,13 @@ export default function DashboardLayout({
             <span className="text-[10px] font-bold tracking-[0.2em] uppercase">Execution Log</span>
           </Link>
 
+          {/* --- THE NEW INJECT TRADE BUTTON --- */}
+          <div className="pt-4 px-2">
+            <Link href="/dashboard/trades/new" className="flex items-center justify-center px-4 py-3 text-red-500 border border-red-900/50 rounded bg-red-950/10 hover:bg-red-900 hover:text-white hover:shadow-[0_0_15px_rgba(153,27,27,0.4)] transition-all group">
+              <span className="text-[10px] font-black tracking-[0.2em] uppercase">Inject Trade</span>
+            </Link>
+          </div>
+          {/* ----------------------------------- */}
           
         </nav>
 
