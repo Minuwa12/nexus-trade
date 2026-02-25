@@ -2,36 +2,44 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
+import { auth } from '@clerk/nextjs/server';
 
-export async function addTrade(formData: FormData) {
-  // 1. Extract the data from your form
+// --- THE DELETE FUNCTION ---
+export async function deleteTrade(formData: FormData) {
+  const id = formData.get('id') as string;
+  await prisma.trade.delete({ where: { id } });
+  revalidatePath('/dashboard');
+}
+
+// --- THE CREATE FUNCTION (Fixed for Vercel) ---
+export async function createTrade(formData: FormData) {
+  // 1. Get the Bouncer's ID
+  const { userId } = await auth(); 
+  
+  if (!userId) {
+    throw new Error("You must be logged in to inject trades.");
+  }
+
   const ticker = formData.get('ticker') as string;
   const side = formData.get('side') as string;
   const entryPrice = parseFloat(formData.get('entryPrice') as string);
-  const exitPrice = formData.get('exitPrice') ? parseFloat(formData.get('exitPrice') as string) : null;
-  const netPnl = formData.get('netPnl') ? parseFloat(formData.get('netPnl') as string) : null;
+  
+  const rawExit = formData.get('exitPrice');
+  const rawPnl = formData.get('netPnl');
+  const exitPrice = rawExit ? parseFloat(rawExit as string) : null;
+  const netPnl = rawPnl ? parseFloat(rawPnl as string) : null;
 
   // 2. Inject it into the Supabase Vault
   await prisma.trade.create({
     data: {
+      userId,  // 👈 THIS IS WHAT VERCEL WAS LOOKING FOR
       ticker,
       side,
       entryPrice,
       exitPrice,
       netPnl,
-    },
+    }
   });
-
-  // 3. Tell the app to refresh the vault and send you back to the log
-  revalidatePath('/dashboard/trades');
-  redirect('/dashboard/trades');
-}export async function deleteTrade(formData: FormData) {
-  const id = formData.get('id') as string;
-
-  await prisma.trade.delete({
-    where: { id },
-  });
-
-  revalidatePath('/dashboard/trades');
+  
+  revalidatePath('/dashboard');
 }
