@@ -32,7 +32,7 @@ export default async function DashboardOverview() {
            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
              <Activity size={14} className="text-red-900" /> Total Executions
            </p>
-           <h2 className="text-5xl font-black text-white mt-4">{totalExecutions}</h2>
+           <h2 className="text-3xl font-black text-white mt-4">{totalExecutions}</h2>
         </div>
 
         <div className="bg-[#0a0a0a] border border-red-950/50 p-6 rounded-xl shadow-2xl relative overflow-hidden group">
@@ -40,7 +40,7 @@ export default async function DashboardOverview() {
            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
              <TrendingUp size={14} className="text-red-900" /> Success Rate
            </p>
-           <h2 className="text-5xl font-black text-white mt-4">{successRate}%</h2>
+           <h2 className="text-3xl font-black text-white mt-4">{successRate}%</h2>
         </div>
 
         <div className="bg-[#0a0a0a] border border-red-950/50 p-6 rounded-xl shadow-2xl relative overflow-hidden group">
@@ -48,7 +48,7 @@ export default async function DashboardOverview() {
            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
              <DollarSign size={14} className="text-red-900" /> Net PnL
            </p>
-           <h2 className={`text-5xl font-black mt-4 ${netPnl >= 0 ? 'text-white' : 'text-red-600'}`}>
+           <h2 className={`text-3xl font-black mt-4 ${netPnl >= 0 ? 'text-white' : 'text-red-600'}`}>
              {netPnl >= 0 ? '+' : '-'}${Math.abs(netPnl).toFixed(2)}
            </h2>
         </div>
