@@ -2,29 +2,48 @@ export const dynamic = 'force-dynamic';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import PerformanceChart from '@/components/ui/PerformanceChart';
 
 export default async function DashboardOverview() {
-  // 1. SECURE THE VAULT: Get the logged-in user's ID
+  // 1. SECURE THE VAULT
   const { userId } = await auth();
   if (!userId) redirect('/sign-in');
 
+  // --- NEW: THE KILL SWITCH (DELETE FUNCTION) ---
+  async function deleteTrade(formData: FormData) {
+    'use server';
+    const tradeId = formData.get('tradeId') as string;
+    
+    // Double-check security so no one can delete someone else's trade
+    const { userId: currentUserId } = await auth();
+    if (!currentUserId) return;
+
+    await prisma.trade.delete({
+      where: {
+        id: tradeId,
+        userId: currentUserId 
+      }
+    });
+
+    // Refresh the dashboard instantly
+    revalidatePath('/dashboard');
+  }
+  // ----------------------------------------------
+
   // 2. FETCH ONLY THIS USER'S TRADES
   const trades = await prisma.trade.findMany({
-    where: {
-      userId: userId // 👈 THE BOUNCER IS NOW ACTIVE
-    },
-    orderBy: { createdAt: 'asc' } // Oldest to newest for the chart
+    where: { userId: userId },
+    orderBy: { createdAt: 'asc' } 
   });
 
-  // 3. MATH CALCULATIONS (Only based on the user's personal trades)
+  // 3. MATH CALCULATIONS
   const totalTrades = trades.length;
   const netProfit = trades.reduce((acc, trade) => acc + (trade.netPnl || 0), 0);
   const winRate = totalTrades > 0
     ? (trades.filter(t => (t.netPnl || 0) > 0).length / totalTrades) * 100
     : 0;
 
-  // Reverse trades for the "Recent Neutralizations" list (newest first)
   const recentTrades = [...trades].reverse().slice(0, 5);
 
   return (
@@ -64,12 +83,11 @@ export default async function DashboardOverview() {
         </div>
         
         <div className="h-[300px] w-full mt-4">
-          {/* 👇 Using 'trades' here fixes the red error you had earlier! */}
           <PerformanceChart trades={trades} /> 
         </div>
       </div>
 
-      {/* RECENT NEUTRALIZATIONS LIST */}
+      {/* RECENT NEUTRALIZATIONS LIST WITH DELETE BUTTON */}
       <div className="bg-[#0a0a0a] border border-red-950/40 rounded-xl overflow-hidden shadow-2xl">
         <div className="bg-red-950/10 px-6 py-4 border-b border-red-950/30 flex justify-between items-center">
           <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Recent Neutralizations</h3>
@@ -85,9 +103,21 @@ export default async function DashboardOverview() {
             recentTrades.map((trade) => (
               <div key={trade.id} className="flex justify-between items-center p-4 hover:bg-red-950/10 transition-colors rounded-lg group">
                 <span className="text-white font-black text-sm tracking-widest">{trade.ticker}</span>
-                <span className={`text-sm font-black font-mono ${trade.netPnl && trade.netPnl > 0 ? 'text-gray-300' : 'text-red-600'}`}>
-                  {trade.netPnl && trade.netPnl > 0 ? '+' : ''}${trade.netPnl?.toFixed(2) || '0.00'}
-                </span>
+                
+                <div className="flex items-center gap-6">
+                  <span className={`text-sm font-black font-mono ${trade.netPnl && trade.netPnl > 0 ? 'text-gray-300' : 'text-red-600'}`}>
+                    {trade.netPnl && trade.netPnl > 0 ? '+' : ''}${trade.netPnl?.toFixed(2) || '0.00'}
+                  </span>
+                  
+                  {/* 👇 THE NEW DELETE FORM & BUTTON 👇 */}
+                  <form action={deleteTrade}>
+                    <input type="hidden" name="tradeId" value={trade.id} />
+                    <button type="submit" className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-500 transition-all font-black text-[10px] tracking-widest uppercase bg-red-950/30 hover:bg-red-900/50 px-3 py-1 rounded">
+                      Nuke
+                    </button>
+                  </form>
+                </div>
+
               </div>
             ))
           )}
